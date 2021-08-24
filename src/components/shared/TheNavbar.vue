@@ -1,25 +1,49 @@
 <template>
-  <nav class="navbar is-spaced" role="navigation" aria-label="main navigation">
+  <nav
+    class="navbar is-spaced"
+    role="navigation"
+    aria-label="main navigation"
+  >
     <div class="navbar-brand">
-      <a class="navbar-item" href="https://bulma.io">
-        <h1 class="title is-4">VueMeetuper</h1>
+      <a
+        class="navbar-item"
+        href="/"
+      >
+        <h1 class="title is-4">
+          VueMeetuper
+        </h1>
       </a>
-      <a role="button" class="navbar-burger burger" aria-label="menu" aria-expanded="false" data-target="navbarBasicExample">
-        <span aria-hidden="true"></span>
-        <span aria-hidden="true"></span>
-        <span aria-hidden="true"></span>
+      <a
+        role="button"
+        class="navbar-burger burger"
+        aria-label="menu"
+        aria-expanded="false"
+        data-target="navbarBasicExample"
+      >
+        <span aria-hidden="true" />
+        <span aria-hidden="true" />
+        <span aria-hidden="true" />
       </a>
     </div>
 
-    <div id="navbarBasicExample" class="navbar-menu">
+    <div
+      id="navbarBasicExample"
+      class="navbar-menu"
+    >
       <div class="navbar-start">
-        <a class="navbar-item">
+        <router-link
+          class="navbar-item"
+          :to="'/'"
+        >
           Home
-        </a>
+        </router-link>
 
-        <a class="navbar-item">
+        <router-link
+          class="navbar-item"
+          :to="{name:'PageMeetupFind'}"
+        >
           Find
-        </a>
+        </router-link>
 
         <div class="navbar-item has-dropdown is-hoverable">
           <a class="navbar-link">
@@ -46,13 +70,50 @@
 
       <div class="navbar-end">
         <div class="navbar-item">
+          <div v-if="user">
+            Welcome {{ user.name }}
+          </div>
+        </div>
+        <div
+          v-if="user"
+          class="navbar-item has-dropdown is-hoverable"
+        >
+          <a class="navbar-link">
+            Account
+          </a>
+          <div class="navbar-dropdown">
+            <a
+              href="#"
+              class="navbar-item"
+            >
+              Profile
+            </a>
+            <hr class="navbar-divider">
+            <a
+              class="navbar-item"
+              @click.prevent="logout"
+            >
+              Logout
+            </a>
+          </div>
+        </div>
+        <div
+          v-else
+          class="navbar-item has-dropdown "
+        >
           <div class="buttons">
-            <a class="button is-primary">
+            <router-link
+              :to="{name: 'PageRegister'}"
+              class="button is-primary"
+            >
               <strong>Sign up</strong>
-            </a>
-            <a class="button is-light">
+            </router-link>
+            <router-link
+              :to="{name: 'PageLogin'}"
+              class="button is-light"
+            >
               Log in
-            </a>
+            </router-link>
           </div>
         </div>
       </div>
@@ -61,7 +122,19 @@
 </template>
 
 <script>
+  import {mapGetters} from 'vuex';
+
   export default {
+    computed: {
+      ...mapGetters({
+        'user': 'auth/authUser'
+      })
+    },
+    methods: {
+      logout() {
+        this.$store.dispatch('auth/logout')
+      }
+    }
   }
 </script>
 
