@@ -29,8 +29,12 @@
         </div>
         <div class="is-pulled-right">
           <!-- We will handle this later (: -->
-          <button class="button is-danger">
-            Leave Group
+          <button
+            v-if="isMember"
+            class="button is-danger"
+            @click="leaveMeetup"
+          >
+            Leave Meetup
           </button>
         </div>
       </div>
@@ -106,85 +110,32 @@
               </h3>
               <p> {{ meetup.description }}</p>
               <!-- Join Meetup, We will handle it later (: -->
-              <button class="button is-primary">
+              <button
+                v-if="canJoin"
+                class="button is-primary"
+                @click="joinMeetup"
+              >
                 Join In
               </button>
-              <!-- Not logged In Case, handle it later (: -->
-              <!-- <button :disabled="true"
-                      class="button is-warning">You need authenticate in order to join</button> -->
-            </div>
-            <!-- Thread List START -->
-            <div class="content is-medium">
-              <h3 class="title is-3">
-                Threads
-              </h3>
-              <div
-                v-for="thread in threads"
-                :key="thread._id"
-                class="box"
+              <button
+                v-if="!isAuthenticated"
+                :disabled="true"
+                class="button is-warning"
               >
-                <!-- Thread title -->
-                <h4
-                  id="const"
-                  class="title is-3"
-                >
-                  {{ thread.title }}
-                </h4>
-                <!-- Create new post, handle later -->
-                <form class="post-create">
-                  <div class="field">
-                    <textarea
-                      class="textarea textarea-post"
-                      placeholder="Write a post"
-                      rows="1"
-                    />
-                    <button
-                      :disabled="true"
-                      class="button is-primary m-t-sm"
-                    >
-                      Send
-                    </button>
-                  </div>
-                </form>
-                <!-- Create new post END, handle later -->
-                <!-- Posts START -->
-                <article
-                  v-for="post in thread.posts"
-                  :key="post._id"
-                  class="media post-item"
-                >
-                  <figure class="media-left is-rounded user-image">
-                    <p class="image is-32x32">
-                      <img
-                        class="is-rounded"
-                        :src="post.user.avatar"
-                      >
-                    </p>
-                  </figure>
-                  <div class="media-content">
-                    <div class="content is-medium">
-                      <div class="post-content">
-                        <!-- Post User Name -->
-                        <strong class="author">
-                          {{ post.user.name }}
-                        </strong>
-                        {{ ' ' }}
-                        <!-- Post Updated at -->
-                        <small class="post-time">
-                          {{ post.updatedAt | formatDate }}
-                        </small>
-                        <br>
-                        <p class="post-content-message">
-                          {{ post.text }}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </article>
-                <!-- Posts END -->
-              </div>
+                You need authenticate in order to join
+              </button>
+              <ThreadCreateModal
+                v-if="isMember || isMeetupOwner"
+                :btn-title="`Welcome ${authUser.username}, Start a new Thread`"
+                :title="'Create Thread'"
+                @threadSubmitted="createThread"
+              />
             </div>
-            <!-- Thread List END -->
+
+            <ThreadList
+              :threads="orderedThreads"
+              :can-post="canPost"
+            />
           </div>
         </div>
       </div>
@@ -194,16 +145,45 @@
 
 <script>
 import { mapActions, mapState } from 'vuex'
+import ThreadCreateModal from '@/components/ThreadCreateModal'
+import ThreadList from '@/components/ThreadList'
 
 export default {
+  components: {
+    ThreadCreateModal,
+    ThreadList
+  },
   computed: {
     ...mapState({
       meetup: state => state.meetups.item,
-      threads: state => state.threads.items
+      threads: state => state.threads.items,
+      authUser: state => state.auth.user
     }),
     meetupCreator () {
       return this.meetup.meetupCreator || ""
     },
+    isAuthenticated () {
+      return this.$store.getters['auth/isAuthenticated']
+    },
+    isMeetupOwner () {
+      return this.$store.getters['auth/isMeetupOwner'](this.meetupCreator._id)
+    },
+    isMember () {
+      return this.$store.getters['auth/isMember'](this.meetup._id)
+    },
+    canJoin () {
+      return !this.isMeetupOwner && this.isAuthenticated && !this.isMember
+    },
+    orderedThreads () {
+      const copyOfThreads = [...this.threads]
+      return copyOfThreads.sort((thread, nextThread) => {
+        return new Date(nextThread.createdAt) - new Date(thread.createdAt)
+      })
+    },
+    canPost () {
+      return this.isAuthenticated && (this.isMember || this.isMeetupOwner)
+    }
+
    },
   created () {
     const meetupId = this.$route.params.id
@@ -214,8 +194,20 @@ export default {
 
    methods: {
      ...mapActions('meetups', ['fetchMeetup']),
-     ...mapActions('threads', ['fetchThreads'])
-
+     ...mapActions('threads', ['fetchThreads', 'postThread']),
+     joinMeetup () {
+       this.$store.dispatch('meetups/joinMeetup', this.meetup._id)
+     },
+     leaveMeetup () {
+       this.$store.dispatch('meetups/leaveMeetup',this.meetup._id)
+     },
+     createThread ({title, done}) {
+       this.postThread({title, meetupId: this.meetup._id})
+        .then(() => {
+          this.$toasted.success('Thread Successfully Created', { duration: 3000})
+          done()
+        })
+     }
    }
 }
 </script>
@@ -298,40 +290,4 @@ export default {
     margin-bottom: 15px;
   }
   // Post Create END
-  // Thread List START
-  .content {
-    figure {
-      margin-bottom: 0;
-    }
-  }
-  .media-content-threads {
-    background-color: #f1f1f1;
-    padding: 3px 20px;
-    border-radius: 10px;
-    margin-right: 40px;
-    width: 100px;
-  }
-  .media-left.user-image {
-    margin: 0;
-    margin-right: 15px;
-  }
-  .post-item {
-  }
-  .media + .media {
-    border: none;
-    margin-top: 0;
-  }
-  .post-content {
-    margin: 0;
-    &-message {
-      font-size: 16px;
-    }
-    .author {
-      font-size: 18px;
-    }
-    .post-time {
-      font-size: 16px;
-    }
-  }
-  // Thread List END
 </style>

@@ -126,12 +126,14 @@
         this.$v.form.$touch()
         this.$store.dispatch('auth/loginWithEmailAndPassword', this.form)
           .then(() => {
+            this.$toasted.success('Logged In', {
+              duration: 3000
+            })
             this.$router.push('/')
             
           })
-          .catch(err => {
-            console.log(err)
-            const error = err.response.data.errors.message
+          .catch(error => {
+            // console.log(err)
             this.$toasted.error(error, {
               duration: 5000
             })

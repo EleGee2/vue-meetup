@@ -60,7 +60,7 @@
                     {{ meetup.title }}
                   </p>
                   <span class="tag is-success m-b-xs">
-                    {{ meetup.category.name | capitalize }}
+                    {{ meetup.category.name | uppercase }}
                   </span>
                   <p class="subtitle is-7">
                     {{ meetup.location }}
@@ -89,7 +89,7 @@
   export default {
     computed: {
       meetups () {
-        return this.$store.state.meetups
+        return this.$store.state.meetups.items
       }
     },
     created () {
